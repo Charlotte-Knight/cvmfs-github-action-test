@@ -22,17 +22,8 @@ jobs:
 
       - name: Run ROOT macro
         run: |
-          # Source a pinned ROOT version from CVMFS sft.cern.ch for reproducibility
-          THISROOT=$(find /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.32* -maxdepth 3 \
-            -name "thisroot.sh" 2>/dev/null | sort -V | tail -1)
-          if [ -z "$THISROOT" ]; then
-            # Fall back to any available ROOT version
-            THISROOT=$(find /cvmfs/sft.cern.ch/lcg/releases/ROOT -maxdepth 3 \
-              -name "thisroot.sh" 2>/dev/null | sort -V | tail -1)
-          fi
-          echo "Using ROOT: $THISROOT"
-          source "$THISROOT"
-          root -b -q count_events.C
+          source /cvmfs/sft.cern.ch/lcg/views/LCG_108/x86_64-el9-gcc15-opt/setup.sh          
+          root -b -q -l count_events.C > output.txt
 
       - name: Compare output to baseline
         run: |
