@@ -1,0 +1,49 @@
+name: CVMFS ROOT Test
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Run daily at 06:00 UTC to catch any CVMFS file changes
+    - cron: '0 6 * * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Mount CVMFS
+        uses: cvmfs-contrib/github-action-cvmfs@v4
+        with:
+          cvmfs_repositories: sft.cern.ch
+
+      - name: Run ROOT macro
+        run: |
+          # Source a pinned ROOT version from CVMFS sft.cern.ch for reproducibility
+          THISROOT=$(find /cvmfs/sft.cern.ch/lcg/releases/ROOT/6.32* -maxdepth 3 \
+            -name "thisroot.sh" 2>/dev/null | sort -V | tail -1)
+          if [ -z "$THISROOT" ]; then
+            # Fall back to any available ROOT version
+            THISROOT=$(find /cvmfs/sft.cern.ch/lcg/releases/ROOT -maxdepth 3 \
+              -name "thisroot.sh" 2>/dev/null | sort -V | tail -1)
+          fi
+          echo "Using ROOT: $THISROOT"
+          source "$THISROOT"
+          root -b -q count_events.C
+
+      - name: Compare output to baseline
+        run: |
+          echo "=== Produced output ==="
+          cat output.txt
+          echo "=== Expected output ==="
+          cat expected_output.txt
+          if diff -q output.txt expected_output.txt > /dev/null 2>&1; then
+            echo "PASS: output matches expected"
+          else
+            echo "FAIL: output differs from expected"
+            diff expected_output.txt output.txt
+            exit 1
+          fi
